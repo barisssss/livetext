@@ -16,7 +16,7 @@ my $url;
 my @urls;
 my $title;
 my $date;
-my $kickoff;
+my $datePublished;
 my $team1;
 my $team2;
 my $home_goal;
@@ -27,10 +27,10 @@ my $teaser;
 my $article;
 my $p;
 
-my $start_url = "https://www.kicker.de/news/fussball/bundesliga/spieltag/1-bundesliga/2016-17/-1/0/spieltag.html";
+my $start_url = "https://www.kicker.de/bundesliga/spieltag/2017-18/-1/0";
 # --> Define the start page (to find under Liga -> Spieltag/Tabelle -> alle) 
 
-my $path = "/define/path/BL1617.xml";
+my $path = "./results/1718kickermatchreport.xml";
 # --> Define path and outpute filename
 
 ############################
@@ -42,7 +42,7 @@ print "Hole die URLs…\n";
 my $start_html = qx(curl -s $start_url);
 my @lines = split /\n/, $start_html;
 foreach my $line (@lines) {
-	if ($line =~ m/<td><a class="link" href="(.+?)">Analyse/) {
+	if ($line =~ m/<a class="kick__v100-gameList__gameRow__stateCell__indicator kick__v100-gameList__gameRow__stateCell__indicator--schema" href="(.+?)">/) {
 		$url = "https://www.kicker.de" . $1;
 		push @urls, $url;
 	}
@@ -62,60 +62,35 @@ foreach my $url_game (@urls) {
 	if ($html =~ /<title>(.+?)<\/title>/) {
 		$title = $1;
 	}
-	if ($html =~ /Anstoß:<\/b><\/div>\s+<div class="wert">(.+?)\.(.+?)\.(.+?) (.+?) Uhr/) {
+	if ($html =~ /kick__article__time">(.+?)\.(.+?)\.(.+?) - (.+?)</) {
 		$date = "$3-$2-$1";
-		$kickoff = $4;
-	}		
-	if ($html =~ /<h1><a href=".+?">(.+?)<\/a><\/h1>\s+<\/td>\s+<td class="lttabst"/) {
-		$team1 = $1;
-	}
-	if ($html =~ /<h1><a href=".+?">(.+?)<\/a><\/h1>\s+<\/td>\s+<td class="lttablig/) {
-		$team2 = $1;
-	}
-	if ($html =~ /class="boardH">(\d)<\/div>/) {
-		$home_goal = $1;
-	}
-	if ($html =~ /class="boardA">(\d)<\/div>/) {
-		$away_goal = $1;
-	}
-
-	if ($html =~ /<h2 class="topline">(.+?)<\/h2>/) {
-			$topline = decode_entities($1);
-			$topline =~ s/&/\&amp;/g;
-	}
-	if ($html =~ /h2><h1>(.+?)<\/h1>/) {
-			$head = decode_entities($1);
-			$head =~ s/&/\&amp;/g;
-	}
-	if ($html =~ /<p class="teaser">(.+?)<\/p>/) {
-			$teaser = decode_entities($1);
-			$teaser =~ s/&/\&amp;/g;
+		$datePublished = $4;
 	}
 
 	print OUT "<text>
 	<url>$url_game</url>
 	<title>$title</title>
-	<team1>$team1</team1>
-	<team2>$team2</team2>
 	<date>$date</date>
-	<kickoff>$kickoff</kickoff>
-	<result>$home_goal:$away_goal</result>
-	<topline>$topline</topline>
-	<head>$head</head>
-	<teaser>$teaser</teaser>\n";
+	<time>$datePublished</time>\n";
 
-	if ($html =~ /<!-- content -->([\w\W]+?)<!--/) {
+	if ($html =~ /kick__article__content__child">([\w\W]+?)<div class="kick__article__detail">/) {
 		$article = $1;
 	}
 	my @paragraphs = split /<[hp]/, $article;
 	foreach my $paragraph (@paragraphs) {
-		if ($paragraph =~ m/^3?>(.+?)<\/[ph]3?>/g) {
+		# print OUT "START: $paragraph :END\n";
+		if ($paragraph =~ />(.+?)<\/p/gs 
+				&& $paragraph !~ m/kick__article__bonus-stat__key-val-b/
+				&& $paragraph !~ m/kick__two__lines/
+				&& $paragraph !~ m/kick__article__bonus-stat__person-name/
+			) {
 			$p = $1;
 			$p =~ s/<.+?>//g;
 			$p = decode_entities($p);
 			$p =~ s/&/\&amp;/g;
-			$p = "\t<p>$p</p>\n";
-			print OUT $p if defined $p;
+			$p =~ s/[\r\n\t\f\v]//g;
+			$p =~ s/^\s+|\s+$//g;
+			print OUT "\t<p>$p</p>\n" if $p ne "";
 		}
 	}
 	
