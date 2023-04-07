@@ -27,10 +27,10 @@ my $teaser;
 my $article;
 my $p;
 
-my $start_url = "https://www.kicker.de/bundesliga/spieltag/2017-18/-1/0";
+my $start_url = "https://www.kicker.de/bundesliga/spieltag/" . $ARGV[0] . "/-1/0";
 # --> Define the start page (to find under Liga -> Spieltag/Tabelle -> alle) 
 
-my $path = "./results/1718kickermatchreport.xml";
+my $path = "./results/" . $ARGV[0] . ".xml";
 # --> Define path and outpute filename
 
 ############################
